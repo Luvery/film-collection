@@ -1,7 +1,9 @@
 using FilmCollection.API.Authorization;
+using FilmCollection.API.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -79,6 +81,11 @@ namespace FilmCollection.API
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions["SecretKey"])),
                 };
+            });
+
+            services.AddDbContext<FilmDbContext>(options =>
+            {
+                options.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=FilmContext;Trusted_Connection=True;MultipleActiveResultSets=true");
             });
         }
 

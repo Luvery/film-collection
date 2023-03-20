@@ -1,10 +1,10 @@
 ﻿namespace FilmCollection.API.Controllers
 {
-    internal class Film
+    public class Film
     {
-        public int Id { get; internal set; }
-        public string Title { get; internal set; }
-        public string Director { get; internal set; }
-        public int Score { get; internal set; }
+        public int Id { get; set; }
+        public string Title { get; set; }
+        public string Director { get; set; }
+        public int Score { get; set; }
     }
 }
