@@ -1,8 +1,14 @@
+using FilmCollection.API.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Collections.Generic;
+using System.Text;
 
 namespace FilmCollection.API
 {
@@ -21,7 +27,58 @@ namespace FilmCollection.API
             services.AddControllers();
             services.AddSwaggerGen(setup =>
             {
-                setup.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "Film collection API", Version = "V1" });
+                setup.SwaggerDoc("v1", new OpenApiInfo { Title = "Film collection API", Version = "V1" });
+                setup.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Description = @"JWT Authorization header using the Bearer scheme. <BR/> 
+                      Enter 'Bearer' [space] and then your token in the text input below.
+                      <BR/>Example: 'Bearer 12345abcdef'",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer",
+                });
+                setup.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference= new OpenApiReference
+                            {
+                                Type= ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            },
+                        },
+                        new List<string>()
+                    }
+                });
+            });
+
+            var jwtOptions = Configuration.GetSection(nameof(JwtOptions));
+            services.Configure<JwtOptions>(options =>
+            {
+                options.Audience = jwtOptions["Audience"];
+                options.Issuer = jwtOptions["Issuer"];
+                options.SecretKey = jwtOptions["SecretKey"];
+                options.ValidForMinutes = double.Parse(jwtOptions["ValidForMinutes"]);
+            });
+            services
+            .AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(cfg =>
+            {
+                cfg.TokenValidationParameters = new TokenValidationParameters()
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtOptions["Issuer"],
+                    ValidateAudience = true,
+                    ValidAudience = jwtOptions["Audience"],
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions["SecretKey"])),
+                };
             });
         }
 
@@ -32,7 +89,7 @@ namespace FilmCollection.API
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(options => 
+                app.UseSwaggerUI(options =>
                 {
                     options.SwaggerEndpoint("/swagger/v1/swagger.json", "Film collection");
                 });
@@ -40,6 +97,7 @@ namespace FilmCollection.API
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
